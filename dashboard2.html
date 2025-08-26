@@ -1,0 +1,1068 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard de Incidencias</title>
+    <!-- Hojas de estilo -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+    <style>
+/* General Body Styles */
+:root {
+    --primary-color: #005a9c;
+    --primary-light: #4299e1;
+    --background-color: #f0f2f5;
+    --card-background: #ffffff;
+    --text-color: #333;
+    --border-color: #e2e8f0;
+    --shadow-light: 0 2px 4px rgba(0,0,0,0.05);
+    --shadow-medium: 0 4px 6px rgba(0,0,0,0.1);
+    --border-radius: 8px;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+    background-color: var(--background-color);
+    color: var(--text-color);
+    margin: 0;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.top-container, main, footer {
+    width: 100%;
+    max-width: 1600px;
+}
+
+.top-container {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    margin-bottom: 30px;
+}
+
+.file-loader-card {
+    background-color: var(--card-background);
+    padding: 20px;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-medium);
+}
+
+header {
+    flex-grow: 1;
+    text-align: center;
+}
+
+h1 {
+    color: var(--primary-color);
+    margin: 0;
+    font-size: 4rem;
+}
+
+/* KPI Container */
+.kpi-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+    margin-bottom: 20px;
+}
+
+.kpi-card {
+    background-color: var(--card-background);
+    padding: 20px;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-medium);
+    text-align: center;
+}
+
+.kpi-card h2 {
+    margin: 0 0 10px 0;
+    font-size: 1rem;
+    color: #666;
+}
+
+.kpi-card p {
+    margin: 0;
+    font-size: 2rem;
+    font-weight: bold;
+    color: var(--primary-color);
+}
+
+.kpi-card.corrected p {
+    color: #28a745;
+}
+
+/* Filter Container */
+.filter-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    background-color: var(--card-background);
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: var(--shadow-medium);
+    margin-bottom: 25px;
+    align-items: flex-start;
+    border: 1px solid var(--border-color);
+}
+
+.filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 220px;
+    flex-grow: 1;
+}
+
+.filter-group label {
+    font-weight: 600;
+    color: #2d3748;
+    font-size: 0.9rem;
+}
+
+/* Grupo específico para las fechas */
+.date-group {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    min-width: 150px;
+    flex-shrink: 0;
+}
+
+.date-item {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.date-item input[type="date"] {
+    padding: 8px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    font-size: 0.9rem;
+    height: 42px;
+    width: 140px;
+    box-sizing: border-box;
+    transition: all 0.2s;
+}
+
+.date-item input[type="date"]:focus {
+    outline: none;
+    border-color: var(--primary-light);
+    box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.2);
+}
+
+/* Minimalist Filter Bar */
+.filter-bar {
+    display: inline-flex;
+    background-color: #e2e8f0;
+    border-radius: 21px;
+    padding: 4px;
+    height: 42px;
+    box-sizing: border-box;
+    align-self: center;
+}
+
+/* Estilo para los botones de filtro */
+.filter-button {
+    border: none;
+    background-color: transparent;
+    padding: 6px 16px;
+    border-radius: 16px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    color: #000;
+    font-weight: 400;
+}
+
+/* Estilo para el botón activo - CORREGIDO */
+.filter-button.active {
+    background-color: white !important;
+    color: #2b6cb0 !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    font-weight: 700 !important;
+}
+
+/* Efecto hover para botones no activos */
+.filter-button:not(.active):hover {
+    background-color: rgba(255, 255, 255, 0.5);
+    color: #2c5282;
+}
+
+/* Custom Multi-Select Dropdown */
+.custom-select-container {
+    position: relative;
+    width: 100%;
+}
+
+.select-control {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    min-height: 42px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 4px 8px;
+    cursor: pointer;
+    background-color: var(--card-background);
+    transition: all 0.2s;
+    box-sizing: border-box;
+}
+
+.select-control:focus, .select-control.open {
+    border-color: var(--primary-light);
+    box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.2);
+    outline: none;
+}
+
+.selected-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    flex-grow: 1;
+}
+
+.chip {
+    display: inline-flex;
+    align-items: center;
+    background-color: #ebf8ff;
+    border: 1px solid #90cdf4;
+    border-radius: 4px;
+    color: #2b6cb0;
+    padding: 2px 8px;
+    font-size: 0.85rem;
+    white-space: nowrap;
+}
+
+.placeholder {
+    color: #a0aec0;
+    padding: 5px 0;
+}
+
+.select-arrow {
+    margin-left: auto;
+    color: #a0aec0;
+    transition: transform 0.2s;
+}
+
+.select-control.open .select-arrow {
+    transform: rotate(180deg);
+}
+
+.dropdown-panel {
+    position: absolute;
+    top: calc(100% + 5px);
+    left: 0;
+    width: 100%;
+    background-color: var(--card-background);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-medium);
+    z-index: 1000;
+    display: none;
+    flex-direction: column;
+    max-height: 300px;
+    overflow: hidden;
+}
+
+.dropdown-panel.show {
+    display: flex;
+}
+
+.dropdown-header {
+    padding: 8px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.search-input {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    box-sizing: border-box;
+}
+
+.options-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    overflow-y: auto;
+    flex-grow: 1;
+}
+
+.options-list li {
+    padding: 8px 12px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.options-list li:hover, .options-list li.focused {
+    background-color: #f7fafc;
+}
+
+.options-list li.hidden {
+    display: none;
+}
+
+.options-list input[type="checkbox"] {
+    margin-right: 8px;
+    cursor: pointer;
+}
+
+.dropdown-footer {
+    padding: 8px;
+    border-top: 1px solid var(--border-color);
+    display: flex;
+    justify-content: space-between;
+}
+
+.clear-button {
+    background: none;
+    border: none;
+    color: var(--primary-light);
+    cursor: pointer;
+    font-size: 0.85rem;
+}
+
+/* Visualizations Container */
+.viz-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-bottom: 20px;
+}
+
+.chart-card {
+    background-color: var(--card-background);
+    padding: 20px;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-medium);
+    min-height: 400px;
+}
+
+#map-container {
+    grid-column: 1 / -1; /* Map takes full width */
+}
+
+#map {
+    height: 500px;
+    width: 100%;
+    border-radius: var(--border-radius);
+}
+
+/* Table Container */
+.table-container {
+    background-color: var(--card-background);
+    padding: 20px;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-medium);
+}
+
+.table-wrapper {
+    max-height: 500px;
+    overflow-y: auto;
+    width: 100%;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+}
+
+#data-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+#data-table th, #data-table td {
+    border-bottom: 1px solid var(--border-color);
+    padding: 12px 15px;
+    text-align: left;
+    font-size: 0.9rem;
+}
+
+#data-table thead {
+    position: sticky;
+    top: 0;
+    background-color: #f7fafc;
+}
+
+#data-table th {
+    font-weight: 600;
+    color: #4a5568;
+}
+
+#data-table tbody tr:hover {
+    background-color: #f7fafc;
+}
+
+footer {
+    text-align: center;
+    margin-top: 20px;
+    padding: 20px;
+    color: #888;
+}
+
+/* Responsive Design */
+@media (max-width: 992px) {
+    .viz-container {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 768px) {
+    .filter-container {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .filter-bar {
+        align-self: center;
+    }
+    
+    .date-group {
+        align-self: center;
+    }
+}
+    </style>
+</head>
+<body>
+    <div class="top-container">
+        <div class="file-loader-card">
+            <label for="csvFileInput">Cargar archivo CSV/XLSX:</label>
+            <input type="file" id="csvFileInput" accept=".csv, .xlsx, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel">
+        </div>
+        <header>
+            <h1>Dashboard de Control de Plagas</h1>
+        </header>
+    </div>
+
+    <main>
+        <section id="kpis" class="kpi-container">
+            <div class="kpi-card">
+                <h2>Total Incidencias</h2>
+                <p id="total-incidencias">0</p>
+            </div>
+            <div class="kpi-card">
+                <h2>Incidencias Internas</h2>
+                <p id="internas-incidencias">0</p>
+            </div>
+            <div class="kpi-card">
+                <h2>Incidencias Repetidas</h2>
+                <p id="repetidas-incidencias">0</p>
+            </div>
+            <div class="kpi-card">
+                <h2>Incidencias Nulas</h2>
+                <p id="nulas-incidencias">0</p>
+            </div>
+            <div class="kpi-card corrected">
+                <h2>Nº Corregido de Incidencias</h2>
+                <p id="corregido-incidencias">0</p>
+            </div>
+        </section>
+
+        <!-- Filtros rediseñados -->
+        <section id="filters" class="filter-container">
+            <!-- Barra de filtros Totales/Corregidos -->
+            <div class="filter-bar">
+                <button id="filter-totales" class="filter-button active">Totales</button>
+                <button id="filter-corregidos" class="filter-button">Corregidos</button>
+            </div>
+
+            <!-- Nuevos desplegables personalizados -->
+            <div class="filter-group">
+                <label>Distrito</label>
+                <div id="distrito-select" class="custom-select-container"></div>
+            </div>
+            <div class="filter-group">
+                <label>Barrio</label>
+                <div id="barrio-select" class="custom-select-container"></div>
+            </div>
+            
+            <!-- Fechas reorganizadas -->
+            <div class="date-group">
+                <div class="date-item">
+                    <label for="start-date">Fecha Inicio</label>
+                    <input type="date" id="start-date">
+                </div>
+                <div class="date-item">
+                    <label for="end-date">Fecha Fin</label>
+                    <input type="date" id="end-date">
+                </div>
+            </div>
+        </section>
+
+        <section id="visualizations" class="viz-container">
+            <div id="map-container" class="chart-card">
+                 <div id="map"></div>
+            </div>
+            <div id="district-chart" class="chart-card"></div>
+            <div id="time-series-chart" class="chart-card"></div>
+            <div id="products-used-chart" class="chart-card"></div>
+            <div id="products-removed-chart" class="chart-card"></div>
+        </section>
+
+        <section id="data-table-section" class="table-container">
+            <h2>Detalle de Incidencias (<span id="filtered-incidencias-count">0</span>)</h2>
+            <div class="table-wrapper">
+                <table id="data-table">
+                    <thead></thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <p>Dashboard desarrollado para Madrid Salud - 2025</p>
+    </footer>
+
+    <!-- Librerías JS -->
+    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.3.2/papaparse.min.js"></script>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.11.0/proj4.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    
+    <script>
+document.addEventListener('DOMContentLoaded', () => {
+
+    // Global state
+    let fullData = [];
+    let allDistricts = [];
+    let allBarrios = [];
+    let map;
+    let mapMarkers = L.layerGroup();
+    let currentFilterMode = 'totales'; // 'totales' or 'corregidos'
+    let selectedDistricts = [];
+    let selectedBarrios = [];
+
+    // Mapeo de vectores a sus colores
+    const vectorColors = {
+        'RATA': '#969696',
+        'CUCA': '#F07605',
+        'PERIPLANETA': '#BF5F3F',
+        'MOSQUITO TIGRE': '#db1e2a',
+        'RATA NEGRA': '#000000',
+        'RATON': '#38a169',
+        'GARRAPATA': '#fde725',
+        'OTROS': '#805ad5'
+    };
+    
+    // Mapeo de vectores antiguos a nuevos
+    const vectorMapping = {
+        'CUCA': 'C. Oriental', 'PERIPLANETA': 'C. Americana', 'RATA': 'Rata Alc.',
+        'GARRAPATA': 'Garrapata', 'MOSQUITO TIGRE': 'Mosquito Tigre', 'RATA NEGRA': 'Rata Negra',
+        'RATON': 'Ratón', 'OTROS': 'Otros'
+    };
+
+    /**
+     * Creates a custom multi-select dropdown component.
+     */
+    function createCustomDropdown(container, options, placeholder, eventName) {
+        container.innerHTML = `
+            <button class="select-control" role="combobox" aria-haspopup="listbox" aria-expanded="false">
+                <div class="selected-chips">
+                    <span class="placeholder">${placeholder}</span>
+                </div>
+                <span class="select-arrow">▼</span>
+            </button>
+            <div class="dropdown-panel" role="listbox">
+                <div class="dropdown-header">
+                    <input type="search" class="search-input" placeholder="Buscar...">
+                </div>
+                <ul class="options-list">
+                    <li>
+                        <label>
+                            <input type="checkbox" class="select-all">
+                            Seleccionar todo
+                        </label>
+                    </li>
+                    ${options.map(opt => `
+                        <li data-value="${opt}" role="option">
+                            <label>
+                                <input type="checkbox">
+                                ${opt}
+                            </label>
+                        </li>
+                    `).join('')}
+                </ul>
+                <div class="dropdown-footer">
+                    <button class="clear-button">Limpiar</button>
+                </div>
+            </div>
+        `;
+
+        const control = container.querySelector('.select-control');
+        const panel = container.querySelector('.dropdown-panel');
+        const searchInput = container.querySelector('.search-input');
+        const optionsList = container.querySelector('.options-list');
+        const selectAllCheckbox = container.querySelector('.select-all');
+        const clearButton = container.querySelector('.clear-button');
+        const chipsContainer = container.querySelector('.selected-chips');
+        const placeholderEl = container.querySelector('.placeholder');
+
+        let selectedValues = [];
+
+        function updateChips() {
+            chipsContainer.innerHTML = '';
+            if (selectedValues.length === 0) {
+                chipsContainer.appendChild(placeholderEl);
+            } else {
+                selectedValues.forEach(value => {
+                    const chip = document.createElement('span');
+                    chip.className = 'chip';
+                    chip.textContent = value;
+                    chipsContainer.appendChild(chip);
+                });
+            }
+        }
+        
+        function updateOptions() {
+            const allOptionCheckboxes = optionsList.querySelectorAll('li[data-value] input[type="checkbox"]');
+            allOptionCheckboxes.forEach(cb => {
+                const value = cb.closest('li').dataset.value;
+                cb.checked = selectedValues.includes(value);
+            });
+            updateSelectAllState();
+        }
+
+        function updateSelectAllState() {
+            const allVisibleOptions = Array.from(optionsList.querySelectorAll('li[data-value]:not(.hidden)'));
+            const allVisibleValues = allVisibleOptions.map(li => li.dataset.value);
+            const selectedVisibleCount = allVisibleValues.filter(v => selectedValues.includes(v)).length;
+
+            if (selectedVisibleCount === 0) {
+                selectAllCheckbox.checked = false;
+                selectAllCheckbox.indeterminate = false;
+            } else if (selectedVisibleCount === allVisibleValues.length) {
+                selectAllCheckbox.checked = true;
+                selectAllCheckbox.indeterminate = false;
+            } else {
+                selectAllCheckbox.checked = false;
+                selectAllCheckbox.indeterminate = true;
+            }
+        }
+        
+        function toggleDropdown(show) {
+            const isShown = typeof show === 'boolean' ? show : !panel.classList.contains('show');
+            panel.classList.toggle('show', isShown);
+            control.classList.toggle('open', isShown);
+            control.setAttribute('aria-expanded', isShown);
+            if(isShown) {
+                searchInput.focus();
+            }
+        }
+
+        control.addEventListener('click', () => toggleDropdown());
+
+        document.addEventListener('click', (e) => {
+            if (!container.contains(e.target)) {
+                toggleDropdown(false);
+            }
+        });
+        
+        container.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                toggleDropdown(false);
+                control.focus();
+            }
+        });
+
+        searchInput.addEventListener('input', () => {
+            const query = searchInput.value.toLowerCase();
+            optionsList.querySelectorAll('li[data-value]').forEach(li => {
+                const match = li.dataset.value.toLowerCase().includes(query);
+                li.classList.toggle('hidden', !match);
+            });
+            updateSelectAllState();
+        });
+
+        selectAllCheckbox.addEventListener('change', () => {
+            const visibleOptions = Array.from(optionsList.querySelectorAll('li[data-value]:not(.hidden)'));
+            const visibleValues = visibleOptions.map(li => li.dataset.value);
+            
+            if (selectAllCheckbox.checked) {
+                selectedValues = [...new Set([...selectedValues, ...visibleValues])];
+            } else {
+                selectedValues = selectedValues.filter(v => !visibleValues.includes(v));
+            }
+            
+            dispatchChange();
+            updateOptions();
+            updateChips();
+        });
+
+        optionsList.addEventListener('click', (e) => {
+            const targetLi = e.target.closest('li[data-value]');
+            if (targetLi) {
+                const value = targetLi.dataset.value;
+                if (selectedValues.includes(value)) {
+                    selectedValues = selectedValues.filter(v => v !== value);
+                } else {
+                    selectedValues.push(value);
+                }
+                dispatchChange();
+                updateOptions();
+                updateChips();
+            }
+        });
+
+        clearButton.addEventListener('click', () => {
+            selectedValues = [];
+            dispatchChange();
+            updateOptions();
+            updateChips();
+        });
+        
+        function dispatchChange() {
+            container.dispatchEvent(new CustomEvent(eventName, {
+                detail: { selected: selectedValues }
+            }));
+        }
+        
+        // Public method to update options
+        container.updateOptions = (newOptions) => {
+            const listContent = newOptions.map(opt => `
+                <li data-value="${opt}" role="option">
+                    <label>
+                        <input type="checkbox">
+                        ${opt}
+                    </label>
+                </li>
+            `).join('');
+            optionsList.querySelector('li:first-child').insertAdjacentHTML('afterend', listContent);
+            // Remove old options
+            const allLis = optionsList.querySelectorAll('li[data-value]');
+            allLis.forEach(li => {
+                if (!newOptions.includes(li.dataset.value)) {
+                    li.remove();
+                }
+            });
+            updateOptions();
+        };
+
+        return container;
+    }
+
+    // --- Inicialización ---
+    function init() {
+        document.getElementById('csvFileInput').addEventListener('change', handleFileSelect, false);
+        initMap();
+        setupFilterButtons();
+        setupDatePickers();
+        
+        // Listen for custom dropdown events
+        const distritoSelect = document.getElementById('distrito-select');
+        const barrioSelect = document.getElementById('barrio-select');
+    
+        distritoSelect.addEventListener('onDistritoChange', (e) => {
+            selectedDistricts = e.detail.selected;
+            filterBarrios();
+            updateAllVisualizations();
+        });
+        
+        barrioSelect.addEventListener('onBarrioChange', (e) => {
+            selectedBarrios = e.detail.selected;
+            updateAllVisualizations();
+        });
+    }
+
+    function initMap() {
+        map = L.map('map').setView([40.416775, -3.703790], 10);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
+        mapMarkers.addTo(map);
+    }
+    
+    function setupFilterButtons() {
+        const totalesBtn = document.getElementById('filter-totales');
+        const corregidosBtn = document.getElementById('filter-corregidos');
+
+        function activateButton(activeBtn, inactiveBtn, mode) {
+            // Remover clases activas de ambos botones primero
+            activeBtn.classList.remove('active');
+            inactiveBtn.classList.remove('active');
+            
+            // Activar el botón clickeado
+            activeBtn.classList.add('active');
+            
+            // Actualizar modo y visualizaciones
+            currentFilterMode = mode;
+            updateAllVisualizations();
+        }
+
+        totalesBtn.addEventListener('click', () => {
+            activateButton(totalesBtn, corregidosBtn, 'totales');
+        });
+
+        corregidosBtn.addEventListener('click', () => {
+            activateButton(corregidosBtn, totalesBtn, 'corregidos');
+        });
+    }
+    
+    function setupDatePickers() {
+        document.getElementById('start-date').value = '2025-01-01';
+        document.getElementById('end-date').value = '2025-06-30';
+        
+        document.getElementById('start-date').addEventListener('change', updateAllVisualizations);
+        document.getElementById('end-date').addEventListener('change', updateAllVisualizations);
+    }
+
+    // --- Manejo de archivos y datos ---
+    function handleFileSelect(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        
+        const reader = new FileReader();
+        if (file.name.endsWith('.xlsx') || file.name.endsWith('.xls')) {
+            reader.onload = (e) => {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                const jsonData = XLSX.utils.sheet_to_json(firstSheet);
+                processData(jsonData);
+            };
+            reader.readAsArrayBuffer(file);
+        } else if (file.name.endsWith('.csv')) {
+            reader.onload = (e) => {
+                Papa.parse(e.target.result, {
+                    header: true,
+                    skipEmptyLines: true,
+                    complete: (results) => {
+                        processData(results.data);
+                    }
+                });
+            };
+            reader.readAsText(file);
+        }
+    }
+
+    function processData(data) {
+        fullData = data.map(row => {
+            // Convertir coordenadas
+            if (row.X && row.Y) {
+                try {
+                    const [lon, lat] = proj4(
+                        '+proj=utm +zone=30 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs',
+                        'EPSG:4326',
+                        [parseFloat(row.X), parseFloat(row.Y)]
+                    );
+                    row.lon = lon;
+                    row.lat = lat;
+                } catch (e) {
+                    row.lon = null; row.lat = null;
+                }
+            }
+            
+            // Mapear vectores
+            row.vectorGroup = 'otros';
+            for (const [oldVec, newVec] of Object.entries(vectorMapping)) {
+                if (row[oldVec] == 1) {
+                    row.vectorGroup = newVec;
+                    break;
+                }
+            }
+            return row;
+        });
+
+        populateFilters();
+        
+        // Asegurar que el botón "Totales" esté activo después de cargar datos
+        const totalesBtn = document.getElementById('filter-totales');
+        const corregidosBtn = document.getElementById('filter-corregidos');
+        totalesBtn.classList.add('active');
+        corregidosBtn.classList.remove('active');
+        currentFilterMode = 'totales';
+        
+        updateAllVisualizations();
+    }
+
+    // --- Lógica de filtros ---
+    function populateFilters() {
+        allDistricts = [...new Set(fullData.map(row => row.DISTRITO).filter(Boolean))].sort();
+        allBarrios = [...new Set(fullData.map(row => ({ barrio: row.BARRIO, distrito: row.DISTRITO })).filter(item => item.barrio))];
+
+        const distritoContainer = document.getElementById('distrito-select');
+        const barrioContainer = document.getElementById('barrio-select');
+
+        createCustomDropdown(distritoContainer, allDistricts, 'Seleccione distritos', 'onDistritoChange');
+        createCustomDropdown(barrioContainer, allBarrios.map(b => b.barrio).sort(), 'Seleccione barrios', 'onBarrioChange');
+    }
+
+    function filterBarrios() {
+        let availableBarrios;
+        if (selectedDistricts.length === 0) {
+            availableBarrios = [...new Set(allBarrios.map(b => b.barrio))].sort();
+        } else {
+            availableBarrios = [...new Set(allBarrios
+                .filter(b => selectedDistricts.includes(b.distrito))
+                .map(b => b.barrio)
+            )].sort();
+        }
+        document.getElementById('barrio-select').updateOptions(availableBarrios);
+    }
+
+    function getFilteredData() {
+        let dataView = fullData;
+        if (currentFilterMode === 'corregidos') {
+            dataView = fullData.filter(row => row.INTERNOS == 0 && row.REPETIDOS == 0 && row.NULOS == 0);
+        }
+
+        const startDate = document.getElementById('start-date').value;
+        const endDate = document.getElementById('end-date').value;
+
+        return dataView.filter(row => {
+            const districtMatch = selectedDistricts.length === 0 || selectedDistricts.includes(row.DISTRITO);
+            const barrioMatch = selectedBarrios.length === 0 || selectedBarrios.includes(row.BARRIO);
+            
+            let dateMatch = true;
+            if (row.FECHA) {
+                const rowDate = new Date(row.FECHA);
+                if (startDate) dateMatch &&= rowDate >= new Date(startDate);
+                if (endDate) dateMatch &&= rowDate <= new Date(endDate);
+            }
+            
+            return districtMatch && barrioMatch && dateMatch;
+        });
+    }
+
+    // --- Actualización de visualizaciones ---
+    function updateAllVisualizations() {
+        if (fullData.length === 0) return;
+        const filteredData = getFilteredData();
+        
+        updateKPIs(fullData, filteredData);
+        updateDistrictChart(filteredData);
+        updateTimeSeriesChart(filteredData);
+        updateProductsUsedChart(filteredData);
+        updateProductsRemovedChart(filteredData);
+        updateMap(filteredData);
+        updateTable(filteredData);
+    }
+
+    function updateKPIs(full, filtered) {
+        document.getElementById('total-incidencias').textContent = full.length.toLocaleString();
+        document.getElementById('internas-incidencias').textContent = full.filter(r => r.INTERNOS == 1).length.toLocaleString();
+        document.getElementById('repetidas-incidencias').textContent = full.filter(r => r.REPETIDOS == 1).length.toLocaleString();
+        document.getElementById('nulas-incidencias').textContent = full.filter(r => r.NULOS == 1).length.toLocaleString();
+        const correctedCount = full.filter(r => r.INTERNOS == 0 && r.REPETIDOS == 0 && r.NULOS == 0).length;
+        document.getElementById('corregido-incidencias').textContent = correctedCount.toLocaleString();
+        document.getElementById('filtered-incidencias-count').textContent = filtered.length.toLocaleString();
+    }
+
+    function updateDistrictChart(data) {
+        const counts = data.reduce((acc, row) => {
+            const districtName = row.DISTRITO || 'Desconocido';
+            acc[districtName] = (acc[districtName] || 0) + 1;
+            return acc;
+        }, {});
+        
+        const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+        Plotly.newPlot('district-chart', [{
+            x: sorted.map(d => d[0]),
+            y: sorted.map(d => d[1]),
+            type: 'bar',
+            marker: { color: '#3182ce' }
+        }], {
+            title: 'Incidencias por Distrito',
+            yaxis: { title: 'Nº de incidencias' },
+            margin: { l: 100, r: 20, t: 50, b: 100 },
+        });
+    }
+    
+    function updateTimeSeriesChart(data) {
+        const dailyCounts = data.reduce((acc, row) => {
+            if (!row.FECHA) return acc;
+            const dateStr = new Date(row.FECHA).toISOString().split('T')[0];
+            acc[dateStr] = (acc[dateStr] || 0) + 1;
+            return acc;
+        }, {});
+        
+        const sorted = Object.entries(dailyCounts).sort((a, b) => new Date(a[0]) - new Date(b[0]));
+        Plotly.newPlot('time-series-chart', [{
+            x: sorted.map(d => d[0]),
+            y: sorted.map(d => d[1]),
+            type: 'scatter',
+            mode: 'lines+markers',
+            line: { color: '#3182ce' }
+        }], {
+            title: 'Evolución Temporal de Incidencias',
+            xaxis: { title: 'Fecha' },
+            yaxis: { title: 'Nº de incidencias' },
+        });
+    }
+
+    function updateProductsUsedChart(data) {
+        // Placeholder - implementar según necesidades
+        const container = document.getElementById('products-used-chart');
+        container.innerHTML = '<h3>Productos Utilizados</h3><p>Gráfico en desarrollo...</p>';
+    }
+    
+    function updateProductsRemovedChart(data) {
+        // Placeholder - implementar según necesidades
+        const container = document.getElementById('products-removed-chart');
+        container.innerHTML = '<h3>Productos Retirados</h3><p>Gráfico en desarrollo...</p>';
+    }
+
+    function updateMap(data) {
+        mapMarkers.clearLayers();
+        const validPoints = data.filter(row => row.lat && row.lon);
+
+        validPoints.forEach(row => {
+            const color = vectorColors[row.vectorGroup] || '#808080';
+            const marker = L.circleMarker([row.lat, row.lon], {
+                radius: 6, fillColor: color, color: '#fff',
+                weight: 1, opacity: 1, fillOpacity: 0.8
+            }).bindPopup(`
+                <strong>${row.vectorGroup}</strong><br>
+                Fecha: ${new Date(row.FECHA).toLocaleDateString()}<br>
+                Dirección: ${row.DIRECCION || 'N/A'}
+            `);
+            marker.addTo(mapMarkers);
+        });
+
+        if (validPoints.length > 0) {
+            const bounds = mapMarkers.getBounds();
+            if (bounds.isValid()) map.fitBounds(bounds, { padding: [50, 50] });
+        } else {
+            map.setView([40.416775, -3.703790], 12);
+        }
+    }
+
+    function updateTable(data) {
+        const tableHead = document.querySelector('#data-table thead');
+        const tableBody = document.querySelector('#data-table tbody');
+        tableHead.innerHTML = '';
+        tableBody.innerHTML = '';
+
+        if (data.length === 0) return;
+
+        const headers = Object.keys(data[0]);
+        const headerRow = document.createElement('tr');
+        headers.forEach(header => {
+            const th = document.createElement('th');
+            th.textContent = header;
+            headerRow.appendChild(th);
+        });
+        tableHead.appendChild(headerRow);
+
+        data.slice(0, 200).forEach(row => { // Limitar a 200 filas por rendimiento
+            const tr = document.createElement('tr');
+            headers.forEach(header => {
+                const td = document.createElement('td');
+                td.textContent = row[header];
+                tr.appendChild(td);
+            });
+            tableBody.appendChild(tr);
+        });
+    }
+
+    // Iniciar la aplicación
+    init();
+});
+    </script>
+</body>
+</html>
